@@ -2,6 +2,14 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/userModel.js";
 
+
+// const bcrypt = require('bcryptjs');
+// const jwt = require('jsonwebtoken');
+// const { v4: uuidv4 } = require('uuid');
+// const User = require('../models/User'); // Certifique-se de ter o modelo User configurado
+// require('dotenv').config();
+
+
 // função de criação de usuário;
 // utilizando o bcrypt.hash para encriptar a senha antes de salvar no banco de dados;
 export async function register(req, res) {
@@ -65,3 +73,41 @@ export async function deleteUser(req, res) {
   await user.destroy();
   res.json({ message: "User deleted" });
 }
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.userId; // Obtido do middleware de autenticação
+
+    // Buscar o usuário pelo ID
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado.' });
+    }
+
+    // Verificar se a senha atual está correta
+    const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Senha atual incorreta.' });
+    }
+
+    // Encriptar a nova senha
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Atualizar a senha no banco de dados
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Senha alterada com sucesso.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao alterar a senha.' });
+  }
+}
+
+// module.exports = {
+//   // ... (outras funções do userController)
+//   changePassword,
+// }
